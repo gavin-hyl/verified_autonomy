@@ -76,6 +76,12 @@ RUN apt-get update && apt-get install -y \
     libsuitesparse-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Unitree Go1 dependencies
+RUN apt-get update && apt-get install -y \
+    liblcm-dev \
+    libboost-all-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Joystick and input device support
 RUN apt-get update && apt-get install -y \
     ros-jazzy-joy \
@@ -137,6 +143,9 @@ RUN echo "" >> ~/.bashrc \
     && echo "# Source workspace if it exists" >> ~/.bashrc \
     && echo "if [ -f /workspace/install/setup.bash ]; then" >> ~/.bashrc \
     && echo "    source /workspace/install/setup.bash" >> ~/.bashrc \
+    && echo "fi" >> ~/.bashrc \
+    && echo "if [ -f /unitree_ws/install/setup.bash ]; then" >> ~/.bashrc \
+    && echo "    source /unitree_ws/install/setup.bash" >> ~/.bashrc \
     && echo "fi" >> ~/.bashrc
 
 # Add helpful aliases

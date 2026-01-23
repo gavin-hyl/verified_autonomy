@@ -43,6 +43,9 @@ services:
       # Mount the autonomy stack workspace
       - ../vector_navigation_stack:/workspace:rw
 
+      # Mount Unitree ROS 2 workspace
+      - ../ros2_unitree_ws:/unitree_ws:rw
+
       # X11 socket for GUI
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${HOME}/.Xauthority:/home/${USERNAME:-developer}/.Xauthority:ro
