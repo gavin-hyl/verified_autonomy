@@ -1,3 +1,8 @@
+vector_navigation_stack/
+build/
+install/
+log/
+
 # VS Code internals
 argv.json
 cli/

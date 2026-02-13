@@ -1,0 +1,80 @@
+# =============================================================================
+# Vector Autonomy Stack - Docker Compose Configuration
+# =============================================================================
+#
+# Usage:
+#   docker compose up -d      # Start container in background
+#   docker compose exec ros bash  # Open shell in running container
+#   docker compose down       # Stop and remove container
+#
+# =============================================================================
+
+services:
+  ros:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+        USERNAME: ${USERNAME:-developer}
+
+    image: vector-autonomy:jazzy
+    container_name: vector-autonomy-ros
+
+    # Keep container running
+    stdin_open: true
+    tty: true
+
+    # Network mode for ROS 2 communication
+    network_mode: host
+
+    # Required for GUI applications (RViz, Unity)
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - LIBGL_ALWAYS_SOFTWARE=0
+      # ROS 2 Domain ID (change if needed to avoid conflicts)
+      - ROS_DOMAIN_ID=0
+      # Default robot configuration
+      - ROBOT_CONFIG_PATH=mechanum_drive
+
+    volumes:
+      # Mount the autonomy stack workspace
+      - ../vector_navigation_stack:/workspace:rw
+
+      # Mount Unitree ROS 2 workspace
+      - ../ros2_unitree_ws:/unitree_ws:rw
+
+      # X11 socket for GUI
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.Xauthority:/home/${USERNAME:-developer}/.Xauthority:ro
+
+      # Persistent bash history
+      - vector-autonomy-bash-history:/home/${USERNAME:-developer}/.bash_history_dir
+
+      # Joystick/gamepad device access
+      - /dev/input:/dev/input:ro
+
+    # Device access for joysticks and serial ports
+    devices:
+      - /dev/dri:/dev/dri  # GPU access for rendering
+
+    # Required for /dev/input access
+    privileged: false
+
+    # Allow access to input devices
+    group_add:
+      - input
+
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 4G
+
+# Named volume for persistent bash history
+volumes:
+  vector-autonomy-bash-history:
