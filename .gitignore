@@ -1,0 +1,8 @@
+# VS Code internals
+argv.json
+cli/
+extensions/
+
+# Binary / large files
+*.npz
+*.png
