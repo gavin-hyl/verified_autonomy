@@ -46,6 +46,9 @@ services:
       # Mount Unitree ROS 2 workspace
       - ../ros2_unitree_ws:/unitree_ws:rw
 
+      # Mount scripts from root directory
+      - ../cmd_vel_to_high_cmd.py:/scripts/cmd_vel_to_high_cmd.py:ro
+
       # X11 socket for GUI
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${HOME}/.Xauthority:/home/${USERNAME:-developer}/.Xauthority:ro
