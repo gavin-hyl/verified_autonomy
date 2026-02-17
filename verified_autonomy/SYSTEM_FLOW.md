@@ -402,6 +402,49 @@ Foxglove Bridge (`ros-jazzy-foxglove-bridge`) runs in Docker on port **8765**.
 
 **Connection:** Desktop Foxglove → `ws://localhost:8765`
 
+### Sending Goal Waypoints (Route Planner Mode)
+
+When using the **route planner** (`system_real_robot_with_route_planner.launch`), you give the robot a destination. The FAR planner listens on:
+
+| Topic | Type | Description |
+|-------|------|-------------|
+| `/goal_point` | `geometry_msgs/msg/PointStamped` | 3D goal position |
+| `/goal_pose` | `geometry_msgs/msg/PoseStamped` | Goal pose (position + orientation) |
+
+#### Method 1: Publish Panel (type coordinates manually)
+
+1. Add panel → select **发布 (Publish)**
+2. In the **Topic** field, **type manually**: `/goal_point`
+   - The topic won't appear in the dropdown unless FAR planner is already running
+3. Set **Message schema** to: `geometry_msgs/msg/PointStamped`
+4. In the message editor, enter:
+   ```json
+   {
+     "header": { "frame_id": "map" },
+     "point": { "x": 5.0, "y": 3.0, "z": 0.0 }
+   }
+   ```
+5. Click **Publish** to send the robot to that (x, y) coordinate
+
+#### Method 2: Click-on-Map in 3D Panel
+
+1. Open the **三维 (3D)** panel settings (⚙️ gear icon)
+2. Scroll to the **Publish** section
+3. Set **Type** to `Pose estimate` and **Topic** to `/goal_pose`
+4. Click on the map in the 3D view to place a goal — the robot will navigate there
+
+#### Method 3: Terminal (no Foxglove needed)
+
+```bash
+# From WSL with RMW set:
+source /opt/ros/jazzy/setup.bash
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ros2 topic pub --once /goal_point geometry_msgs/msg/PointStamped \
+  "{header: {frame_id: 'map'}, point: {x: 5.0, y: 3.0, z: 0.0}}"
+```
+
+> **Note:** In **exploration mode** (TARE planner), waypoints are generated automatically — no manual goal is needed.
+
 ---
 
 ## 8  Launch Sequence (4 Terminals)
@@ -416,10 +459,17 @@ cd ~/verified_autonomy/docker
 source /opt/ros/jazzy/setup.bash
 source /workspace/install/setup.bash
 ros2 launch vehicle_simulator system_real_robot_with_exploration_planner.launch
+
+#PCT planner
+ros2 launch vehicle_simulator system_real_robot_with_route_planner.launch use_pct_planner:=true autonomyMode:=true
 ```
 
 #### Terminal 2 – Docker: Foxglove Bridge (second shell)
+Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -or $_.Name -like '*Ethernet*' } | Format-Table Name, InterfaceDescription, Status, LinkSpeed -AutoSize
 
+Get-NetIPAddress -InterfaceAlias "Ethernet 3" -ErrorAction SilentlyContinue | Format-Table IPAddress, PrefixLength, AddressFamily -AutoSize
+
+ping 192.168.1.127 -n 3
 ```bash
 cd ~/verified_autonomy/docker
 ./shell.sh
@@ -428,11 +478,14 @@ cd ~/verified_autonomy/docker
 source /opt/ros/jazzy/setup.bash
 ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765
 ```
-
+Accumulated SLAM map	/overall_map	3D (PointCloud2)
+Robot trajectory	/trajectory	3D (PointCloud2)
+Explored areas	/explored_areas	3D (PointCloud2)
 #### Terminal 3 – WSL: cmd_vel → high_cmd bridge
 
 ```bash
 source /opt/ros/jazzy/setup.bash
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 source ~/verified_autonomy/ros2_unitree_ws/install/setup.bash
 python3 ~/verified_autonomy/cmd_vel_to_high_cmd.py
 ```
@@ -442,6 +495,7 @@ python3 ~/verified_autonomy/cmd_vel_to_high_cmd.py
 ```bash
 cd ~/verified_autonomy/ros2_unitree_ws
 source /opt/ros/jazzy/setup.bash
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 source install/setup.bash
 export LD_LIBRARY_PATH=~/verified_autonomy/ros2_unitree_ws/src/unitree_legged_sdk/lib:$LD_LIBRARY_PATH
 ros2 run unitree_legged_real ros2_udp HIGHLEVEL

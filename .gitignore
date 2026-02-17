@@ -11,3 +11,28 @@ extensions/
 # Binary / large files
 *.npz
 *.png
+
+# Temporary test/diagnostic/check scripts
+check_*.sh
+diag_*.sh
+test_*.sh
+test_*.py
+run_bridge_test.sh
+clean_temp.sh
+kill_old.sh
+kill_orphans.sh
+fix_autonomy.sh
+fix_route.sh
+fresh_launch.sh
+relaunch.sh
+restart_exploration.sh
+restart_stack.sh
+start_bridge.sh
+setup_pct.sh
+check_pct_build.sh
+check_pct_deps.sh
+localPlanner.cpp
+pathFollower.cpp
+
+lidar_tcp_test.py
+lidar_test.py
