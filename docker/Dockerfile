@@ -93,10 +93,39 @@ RUN apt-get update && apt-get install -y \
 # PCT Planner Python Dependencies
 # =============================================================================
 
-RUN pip3 install --break-system-packages \
+RUN pip3 install --break-system-packages --ignore-installed \
     open3d \
-    numpy \
-    cupy-cuda12x
+    cupy-cuda12x \
+    && pip3 install --break-system-packages "setuptools==75.8.2"
+
+# =============================================================================
+# SLAM Dependencies (Sophus, Ceres, GTSAM) - built from vendored sources
+# =============================================================================
+
+COPY vector_navigation_stack/src/slam/dependency/Sophus /tmp/slam_deps/Sophus
+RUN cd /tmp/slam_deps/Sophus \
+    && mkdir -p build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF \
+    && make install \
+    && rm -rf /tmp/slam_deps/Sophus
+
+COPY vector_navigation_stack/src/slam/dependency/ceres-solver /tmp/slam_deps/ceres-solver
+RUN cd /tmp/slam_deps/ceres-solver \
+    && mkdir -p build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release \
+    && make -j$(nproc) \
+    && make install \
+    && rm -rf /tmp/slam_deps/ceres-solver
+
+COPY vector_navigation_stack/src/slam/dependency/gtsam /tmp/slam_deps/gtsam
+RUN cd /tmp/slam_deps/gtsam \
+    && mkdir -p build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release \
+    && make -j$(nproc) \
+    && make install \
+    && rm -rf /tmp/slam_deps/gtsam
+
+RUN ldconfig
 
 # =============================================================================
 # GUI Support (X11)
@@ -167,7 +196,7 @@ RUN echo "" >> ~/.bashrc \
 # Set default robot config
 RUN echo "" >> ~/.bashrc \
     && echo "# Default robot configuration" >> ~/.bashrc \
-    && echo "export ROBOT_CONFIG_PATH=\"mechanum_drive\"" >> ~/.bashrc
+    && echo "export ROBOT_CONFIG_PATH=\"unitree/unitree_g1\"" >> ~/.bashrc
 
 # =============================================================================
 # Entry Point

@@ -1,0 +1,17 @@
+# Only send what the Dockerfile actually needs to the build context.
+# The full workspace is bind-mounted at runtime, not baked into the image.
+
+# Ignore everything by default
+*
+
+# Allow the Dockerfile and docker config
+!docker/Dockerfile
+!docker/.env
+
+# Allow SLAM vendored dependencies (built during image build)
+!vector_navigation_stack/src/slam/dependency/Sophus/**
+!vector_navigation_stack/src/slam/dependency/ceres-solver/**
+!vector_navigation_stack/src/slam/dependency/gtsam/**
+
+# But exclude any leftover build dirs inside them
+vector_navigation_stack/src/slam/dependency/*/build/

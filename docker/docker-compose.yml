@@ -12,8 +12,8 @@
 services:
   ros:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
@@ -40,7 +40,7 @@ services:
       # ROS 2 Domain ID (change if needed to avoid conflicts)
       - ROS_DOMAIN_ID=0
       # Default robot configuration
-      - ROBOT_CONFIG_PATH=mechanum_drive
+      - ROBOT_CONFIG_PATH=unitree/unitree_g1
 
     volumes:
       # Mount the autonomy stack workspace

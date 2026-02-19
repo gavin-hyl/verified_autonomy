@@ -22,8 +22,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-ROBOT_IP="192.168.123.161"
-HOST_IP="192.168.123.162"
+ROBOT_IP="192.168.123.161"      # Go1 robot (WiFi, not Ethernet)
+LIDAR_IP="192.168.1.127"        # Mid-360 lidar
+LIDAR_HOST_IP="192.168.1.5"     # Host IP on lidar subnet
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$SCRIPT_DIR"
 
@@ -117,12 +118,12 @@ configure_network() {
         echo "2. Right-click your Ethernet adapter -> Properties"
         echo "3. Select 'Internet Protocol Version 4 (TCP/IPv4)' -> Properties"
         echo "4. Select 'Use the following IP address':"
-        echo "   IP address: $HOST_IP"
+        echo "   IP address: $LIDAR_HOST_IP"
         echo "   Subnet mask: 255.255.255.0"
         echo "5. Click OK"
         echo ""
         echo "Or use PowerShell (Admin):"
-        echo "  New-NetIPAddress -InterfaceAlias 'Ethernet' -IPAddress $HOST_IP -PrefixLength 24"
+        echo "  New-NetIPAddress -InterfaceAlias 'Ethernet' -IPAddress $LIDAR_HOST_IP -PrefixLength 24"
         return
     fi
 
@@ -149,35 +150,38 @@ configure_network() {
 
     local interface=$1
 
-    print_msg "$YELLOW" "Configuring $interface with IP $HOST_IP..."
+    print_msg "$YELLOW" "Configuring $interface for Mid-360 lidar (${LIDAR_HOST_IP}/24)..."
 
     if [ "$os" == "linux" ]; then
-        sudo ip link set "$interface" down
-        sudo ip addr flush dev "$interface"
-        sudo ip addr add "$HOST_IP/24" dev "$interface"
+        # Add lidar subnet IP (don't flush — avoids removing other IPs on the interface)
+        if ip addr show dev "$interface" | grep -q "$LIDAR_HOST_IP"; then
+            print_msg "$YELLOW" "  $LIDAR_HOST_IP already assigned, skipping"
+        else
+            sudo ip addr add "$LIDAR_HOST_IP/24" dev "$interface" 2>/dev/null || true
+        fi
         sudo ip link set "$interface" up
     else
         # macOS
-        sudo ifconfig "$interface" "$HOST_IP" netmask 255.255.255.0 up
+        sudo ifconfig "$interface" "$LIDAR_HOST_IP" netmask 255.255.255.0 up
     fi
 
     print_msg "$GREEN" "Network configured!"
     test_connection
 }
 
-# Test robot connection
+# Test lidar connection
 test_connection() {
-    print_header "Testing Robot Connection"
+    print_header "Testing Lidar Connection"
 
-    echo "Pinging robot at $ROBOT_IP..."
-    if ping -c 1 -W 2 "$ROBOT_IP" >/dev/null 2>&1; then
-        print_msg "$GREEN" "SUCCESS: Robot is reachable!"
+    echo "Pinging Mid-360 lidar at $LIDAR_IP..."
+    if ping -c 1 -W 2 "$LIDAR_IP" >/dev/null 2>&1; then
+        print_msg "$GREEN" "SUCCESS: Lidar is reachable!"
     else
-        print_msg "$RED" "FAILED: Cannot reach robot at $ROBOT_IP"
+        print_msg "$RED" "FAILED: Cannot reach lidar at $LIDAR_IP"
         echo ""
         echo "Troubleshooting:"
-        echo "  1. Check Ethernet cable is connected"
-        echo "  2. Verify robot is powered on"
+        echo "  1. Check Ethernet cable to lidar is connected"
+        echo "  2. Verify lidar is powered on"
         echo "  3. Run: $0 network <interface>"
     fi
 }
@@ -213,8 +217,8 @@ show_help() {
     echo ""
     echo "Commands:"
     echo "  build [clean]     Build the ROS 2 workspace"
-    echo "  network [iface]   Configure network for Go1 connection"
-    echo "  test              Test connection to robot"
+    echo "  network [iface]   Configure Ethernet for Mid-360 lidar"
+    echo "  test              Test connection to lidar"
     echo "  run               Run the UDP bridge"
     echo "  help              Show this help message"
     echo ""
@@ -233,16 +237,17 @@ show_setup() {
     print_header "Go1 Setup Instructions"
 
     echo ""
-    print_msg "$GREEN" "Step 1: Network Configuration"
+    print_msg "$GREEN" "Step 1: Network Configuration (Lidar)"
     echo "--------------------------------------------"
     if [ "$os" == "windows" ]; then
         echo "On Windows, configure your Ethernet adapter:"
-        echo "  IP: $HOST_IP"
+        echo "  IP: $LIDAR_HOST_IP"
         echo "  Subnet: 255.255.255.0"
         echo "  (See: $0 network for detailed instructions)"
     else
         echo "Run on HOST (not in Docker):"
         echo "  $0 network <ethernet_interface>"
+        echo "  (Assigns $LIDAR_HOST_IP to talk to Mid-360 lidar)"
     fi
 
     echo ""
@@ -272,8 +277,9 @@ show_setup() {
     echo "  python3 /unitree_ws/scripts/go1_control.py  # Interactive"
 
     echo ""
-    print_msg "$YELLOW" "Robot IP: $ROBOT_IP"
-    print_msg "$YELLOW" "Host IP:  $HOST_IP"
+    print_msg "$YELLOW" "Robot IP: $ROBOT_IP (WiFi)"
+    print_msg "$YELLOW" "Lidar IP: $LIDAR_IP (Ethernet)"
+    print_msg "$YELLOW" "Host IP:  $LIDAR_HOST_IP (Ethernet)"
 }
 
 # Main
