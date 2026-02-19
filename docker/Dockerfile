@@ -1,9 +1,9 @@
 # =============================================================================
 # Vector Autonomy Stack - Docker Environment
-# Ubuntu 24.04 + ROS 2 Jazzy
+# Ubuntu 24.04 + ROS 2 Jazzy + CUDA 12.6
 # =============================================================================
 
-FROM ubuntu:24.04
+FROM nvidia/cuda:12.6.3-devel-ubuntu24.04
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -88,6 +88,15 @@ RUN apt-get update && apt-get install -y \
     joystick \
     jstest-gtk \
     && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# PCT Planner Python Dependencies
+# =============================================================================
+
+RUN pip3 install --break-system-packages \
+    open3d \
+    numpy \
+    cupy-cuda12x
 
 # =============================================================================
 # GUI Support (X11)

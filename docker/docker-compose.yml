@@ -34,6 +34,9 @@ services:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - LIBGL_ALWAYS_SOFTWARE=0
+      # NVIDIA GPU visibility
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
       # ROS 2 Domain ID (change if needed to avoid conflicts)
       - ROS_DOMAIN_ID=0
       # Default robot configuration
@@ -70,13 +73,17 @@ services:
     group_add:
       - input
 
-    # Resource limits (adjust as needed)
+    # Resource limits and GPU access
     deploy:
       resources:
         limits:
           memory: 16G
         reservations:
           memory: 4G
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 # Named volume for persistent bash history
 volumes:
