@@ -22,7 +22,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-ROBOT_IP="192.168.123.161"      # Go1 robot (WiFi, not Ethernet)
+ROBOT_IP="192.168.12.1"         # Go1 robot (WiFi AP address)
+ROBOT_HOST_IP="192.168.12.162"  # Host IP on robot subnet (unused when DHCP assigned)
 LIDAR_IP="192.168.1.127"        # Mid-360 lidar
 LIDAR_HOST_IP="192.168.1.5"     # Host IP on lidar subnet
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -150,39 +151,52 @@ configure_network() {
 
     local interface=$1
 
-    print_msg "$YELLOW" "Configuring $interface for Mid-360 lidar (${LIDAR_HOST_IP}/24)..."
+    print_msg "$YELLOW" "Configuring $interface for Go1 robot (${ROBOT_HOST_IP}/24) and Mid-360 lidar (${LIDAR_HOST_IP}/24)..."
 
     if [ "$os" == "linux" ]; then
-        # Add lidar subnet IP (don't flush — avoids removing other IPs on the interface)
+        sudo ip link set "$interface" up
+        # Add robot subnet IP
+        if ip addr show dev "$interface" | grep -q "$ROBOT_HOST_IP"; then
+            print_msg "$YELLOW" "  $ROBOT_HOST_IP already assigned, skipping"
+        else
+            sudo ip addr add "$ROBOT_HOST_IP/24" dev "$interface" 2>/dev/null || true
+            print_msg "$GREEN" "  Added $ROBOT_HOST_IP/24 (robot subnet)"
+        fi
+        # Add lidar subnet IP
         if ip addr show dev "$interface" | grep -q "$LIDAR_HOST_IP"; then
             print_msg "$YELLOW" "  $LIDAR_HOST_IP already assigned, skipping"
         else
             sudo ip addr add "$LIDAR_HOST_IP/24" dev "$interface" 2>/dev/null || true
+            print_msg "$GREEN" "  Added $LIDAR_HOST_IP/24 (lidar subnet)"
         fi
-        sudo ip link set "$interface" up
     else
-        # macOS
-        sudo ifconfig "$interface" "$LIDAR_HOST_IP" netmask 255.255.255.0 up
+        # macOS — add both IPs (alias for second)
+        sudo ifconfig "$interface" "$ROBOT_HOST_IP" netmask 255.255.255.0 up
+        sudo ifconfig "$interface" alias "$LIDAR_HOST_IP" netmask 255.255.255.0
     fi
 
     print_msg "$GREEN" "Network configured!"
     test_connection
 }
 
-# Test lidar connection
+# Test connections
 test_connection() {
-    print_header "Testing Lidar Connection"
+    print_header "Testing Connections"
+
+    echo "Pinging Go1 robot at $ROBOT_IP..."
+    if ping -c 1 -W 2 "$ROBOT_IP" >/dev/null 2>&1; then
+        print_msg "$GREEN" "SUCCESS: Robot is reachable!"
+    else
+        print_msg "$RED" "FAILED: Cannot reach robot at $ROBOT_IP"
+        echo "  Ensure host has an IP in 192.168.123.x and robot is powered on."
+    fi
 
     echo "Pinging Mid-360 lidar at $LIDAR_IP..."
     if ping -c 1 -W 2 "$LIDAR_IP" >/dev/null 2>&1; then
         print_msg "$GREEN" "SUCCESS: Lidar is reachable!"
     else
         print_msg "$RED" "FAILED: Cannot reach lidar at $LIDAR_IP"
-        echo ""
-        echo "Troubleshooting:"
-        echo "  1. Check Ethernet cable to lidar is connected"
-        echo "  2. Verify lidar is powered on"
-        echo "  3. Run: $0 network <interface>"
+        echo "  Ensure Ethernet cable to lidar is connected and lidar is powered on."
     fi
 }
 
